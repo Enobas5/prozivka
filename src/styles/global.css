@@ -1,0 +1,632 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #f3f5fa;
+  --surface: #ffffff;
+  --surface-alt: #f8f9fc;
+  --border: #e1e5ee;
+  --text: #1b2333;
+  --muted: #6c7689;
+  --accent: #3d5afe;
+  --accent-dark: #2f47cc;
+  --accent-soft: #eaeeff;
+  --ok: #2f9e44;
+  --ok-soft: #e7f6ea;
+  --no: #e03131;
+  --no-soft: #fdeaea;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(20, 26, 45, 0.04), 0 10px 30px rgba(20, 26, 45, 0.06);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  line-height: 1.55;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 0.3rem;
+  line-height: 1.25;
+}
+
+p {
+  margin: 0 0 0.5rem;
+}
+
+a {
+  color: var(--accent);
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  width: min(1020px, 100% - 2rem);
+  margin-inline: auto;
+}
+
+/* ---------- Üst bar ---------- */
+.site-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 0;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.brand strong {
+  font-size: 1.3rem;
+  letter-spacing: 0.08em;
+}
+
+.brand small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.site-header nav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+main.container {
+  padding: 1.75rem 0 3rem;
+}
+
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 1rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.site-footer p {
+  margin: 0;
+}
+
+/* ---------- Butonlar ---------- */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.button:hover {
+  background: var(--surface-alt);
+  border-color: #c9d0e0;
+}
+
+.button-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.button-primary:hover {
+  background: var(--accent-dark);
+  border-color: var(--accent-dark);
+}
+
+.button-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+.button-ghost:hover {
+  background: var(--no-soft);
+  color: var(--no);
+}
+
+.button-small {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+/* ---------- Paneller ---------- */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.panel-header h3 {
+  font-size: 1.05rem;
+}
+
+.panel-footer {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.page-header {
+  margin-bottom: 1.25rem;
+}
+
+.breadcrumb {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 0.2rem;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.empty {
+  color: var(--muted);
+  background: var(--surface-alt);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+/* ---------- Formlar ---------- */
+label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="date"] {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.92rem;
+}
+
+input:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+fieldset legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0 0 0.5rem;
+}
+
+.inline-form {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.inline-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1 1 220px;
+}
+
+.form-error {
+  color: var(--no);
+  background: var(--no-soft);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.86rem;
+  margin: 0.75rem 0 0;
+}
+
+.form-success {
+  color: var(--ok);
+  background: var(--ok-soft);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.86rem;
+  margin: 0.75rem 0 0;
+}
+
+/* ---------- Giriş sayfası ---------- */
+.auth-page {
+  max-width: 420px;
+  margin: 3rem auto;
+}
+
+.auth-page .panel {
+  padding: 1.75rem;
+}
+
+.auth-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.auth-fields .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.auth-switch {
+  margin: 1rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.link-button {
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* ---------- Sınıf kartları ---------- */
+.class-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.class-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.class-card h3 {
+  font-size: 1.05rem;
+}
+
+.class-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+/* ---------- Sekmeler ---------- */
+.tabs ul {
+  display: flex;
+  gap: 0.4rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.tab-button {
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0.6rem 0.9rem;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.tab-button:hover {
+  color: var(--text);
+}
+
+.tab-button.is-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ---------- Listeler ---------- */
+.student-list li,
+.session-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.student-list li:last-child,
+.session-list li:last-child {
+  border-bottom: none;
+}
+
+.student-list .student-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.order {
+  color: var(--muted);
+  font-size: 0.8rem;
+  width: 1.6rem;
+}
+
+.session-chip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 0.55rem 0.8rem;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.session-chip:hover {
+  background: var(--surface-alt);
+}
+
+.session-chip.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+.badge-ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.badge-wait {
+  background: #fff4e0;
+  color: #b5730a;
+}
+
+/* ---------- Yoklama listesi ---------- */
+.attendance-list li {
+  border-bottom: 1px solid var(--border);
+}
+
+.attendance-list li:last-child {
+  border-bottom: none;
+}
+
+.attendance-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.3rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.attendance-list input[type="checkbox"] {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--ok);
+  cursor: pointer;
+}
+
+.attendance-row .student-name {
+  flex: 1;
+}
+
+.status {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+}
+
+.status-ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.status-no {
+  background: var(--no-soft);
+  color: var(--no);
+}
+
+fieldset:disabled .attendance-row {
+  cursor: default;
+  opacity: 0.85;
+}
+
+/* ---------- Rapor tablosu ---------- */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+caption {
+  text-align: left;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding-bottom: 0.6rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.6rem 0.7rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+thead th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+tbody tr:hover {
+  background: var(--surface-alt);
+}
+
+td.count-ok {
+  color: var(--ok);
+  font-weight: 700;
+}
+
+td.count-no {
+  color: var(--no);
+  font-weight: 700;
+}
+
+meter {
+  width: 110px;
+  height: 0.7rem;
+  vertical-align: middle;
+  margin-right: 0.5rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.summary-grid div {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.8rem;
+}
+
+.summary-grid dt {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.summary-grid dd {
+  margin: 0.2rem 0 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.loading {
+  text-align: center;
+  color: var(--muted);
+  padding: 3rem 0;
+}
+
+@media (max-width: 560px) {
+  .inline-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.sync-status {
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  white-space: nowrap;
+}
+
+.field small {
+  font-weight: 400;
+  font-size: 0.78rem;
+}
+
+fieldset:disabled {
+  opacity: 0.7;
+}
+}
