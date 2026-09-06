@@ -20,16 +20,25 @@ function hatayiCevir(message) {
     return "E-posta veya şifre hatalı.";
   }
   if (m.includes("user already registered") || m.includes("already been registered")) {
-    return "Bu e-posta ile zaten bir hesap var. Giriş yapmayı dene.";
+    return "Bu e-posta ile zaten bir hesap var.";
   }
   if (m.includes("password should be at least")) {
     return "Şifre en az 6 karakter olmalı.";
   }
   if (m.includes("email not confirmed")) {
-    return "E-posta henüz doğrulanmamış. Supabase ayarlarından doğrulamayı kapatabilirsin.";
+    return "E-posta henüz doğrulanmamış.";
   }
   if (m.includes("unable to validate email") || m.includes("invalid email")) {
     return "Geçerli bir e-posta adresi gir.";
+  }
+  if (m.includes("new password should be different")) {
+    return "Yeni şifre eskisiyle aynı olamaz.";
+  }
+  if (m.includes("auth session missing") || m.includes("session_not_found")) {
+    return "Sıfırlama bağlantısı geçersiz veya süresi dolmuş. Yeni bir bağlantı iste.";
+  }
+  if (m.includes("for security purposes") || m.includes("rate limit")) {
+    return "Çok sık denedin. Bir dakika bekleyip tekrar dene.";
   }
   if (m.includes("failed to fetch") || m.includes("network")) {
     return "Sunucuya ulaşılamadı. İnternet bağlantını kontrol et.";
@@ -40,6 +49,7 @@ function hatayiCevir(message) {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
+  const [recovering, setRecovering] = useState(false);
 
   useEffect(() => {
     let iptal = false;
@@ -50,7 +60,11 @@ export function AuthProvider({ children }) {
       setReady(true);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      // Sifre sifirlama baglantisiyla gelindiginde isaretle.
+      if (event === "PASSWORD_RECOVERY") {
+        setRecovering(true);
+      }
       setUser(kullaniciyaCevir(session?.user));
       setReady(true);
     });
@@ -83,8 +97,7 @@ export function AuthProvider({ children }) {
     if (!data.session) {
       return {
         ok: false,
-        error:
-          "Hesap oluşturuldu ama oturum açılmadı. Supabase → Authentication → Email bölümünden 'Confirm email' ayarını kapat.",
+        error: "Hesap oluşturuldu ama oturum açılmadı. E-posta doğrulaması gerekiyor olabilir.",
       };
     }
 
@@ -103,12 +116,56 @@ export function AuthProvider({ children }) {
     return { ok: true };
   }
 
+  // Sifirlama baglantisi gonderir.
+  async function requestPasswordReset(email) {
+    const temiz = email.trim();
+
+    if (!temiz) {
+      return { ok: false, error: "E-posta adresini yaz." };
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(temiz, {
+      redirectTo: `${window.location.origin}/sifre-sifirla`,
+    });
+
+    if (error) {
+      return { ok: false, error: hatayiCevir(error.message) };
+    }
+    return { ok: true };
+  }
+
+  // Sifirlama baglantisiyla gelindikten sonra yeni sifreyi yazar.
+  async function updatePassword(newPassword) {
+    if (newPassword.length < 6) {
+      return { ok: false, error: "Şifre en az 6 karakter olmalı." };
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      return { ok: false, error: hatayiCevir(error.message) };
+    }
+
+    setRecovering(false);
+    return { ok: true };
+  }
+
   async function logout() {
     await supabase.auth.signOut();
     setUser(null);
+    setRecovering(false);
   }
 
-  const value = { user, ready, register, login, logout };
+  const value = {
+    user,
+    ready,
+    recovering,
+    register,
+    login,
+    logout,
+    requestPasswordReset,
+    updatePassword,
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

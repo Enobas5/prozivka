@@ -3,14 +3,18 @@ import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import { DataProvider } from "./context/DataContext.jsx";
 import Header from "./components/Header.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
+import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import ClassPage from "./pages/ClassPage.jsx";
 
 function ProtectedRoute({ children }) {
-  const { user, ready } = useAuth();
+  const { user, ready, recovering } = useAuth();
 
   if (!ready) {
     return <p className="loading">Yükleniyor…</p>;
+  }
+  if (recovering) {
+    return <Navigate to="/sifre-sifirla" replace />;
   }
   if (!user) {
     return <Navigate to="/giris" replace />;
@@ -19,10 +23,13 @@ function ProtectedRoute({ children }) {
 }
 
 function GuestRoute({ children }) {
-  const { user, ready } = useAuth();
+  const { user, ready, recovering } = useAuth();
 
   if (!ready) {
     return <p className="loading">Yükleniyor…</p>;
+  }
+  if (recovering) {
+    return <Navigate to="/sifre-sifirla" replace />;
   }
   if (user) {
     return <Navigate to="/" replace />;
@@ -45,6 +52,7 @@ function AppShell() {
               </GuestRoute>
             }
           />
+          <Route path="/sifre-sifirla" element={<ResetPasswordPage />} />
           <Route
             path="/"
             element={
