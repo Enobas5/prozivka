@@ -1,25 +1,46 @@
-import { useData } from "../context/DataContext.jsx";
 import PrintSheet from "./PrintSheet.jsx";
+import { tarihiKisaYaz } from "../lib/tarih.js";
 
 export default function ReportPanel({ classroom }) {
-  useData();
+  const kayitliDersler = classroom.sessions
+    .filter((session) => session.saved)
+    .sort((a, b) => {
+      if (a.date !== b.date) return a.date > b.date ? 1 : -1;
+      return (a.slot || "").localeCompare(b.slot || "", "tr");
+    });
 
-  const kayitliDersler = classroom.sessions.filter((session) => session.saved);
+  const sinifinIlkDersi = kayitliDersler[0]?.date || null;
 
   const satirlar = classroom.students.map((student) => {
     let varSayisi = 0;
     let yokSayisi = 0;
 
     kayitliDersler.forEach((session) => {
+      if (student.joinedAt && session.date < student.joinedAt) return;
+
       const durum = session.records[student.id];
+      if (durum !== "var" && durum !== "yok") return;
+
       if (durum === "var") varSayisi += 1;
-      if (durum === "yok") yokSayisi += 1;
+      else yokSayisi += 1;
     });
 
     const toplam = varSayisi + yokSayisi;
     const yuzde = toplam === 0 ? 0 : Math.round((yokSayisi / toplam) * 100);
+    const sonradanKatildi = Boolean(
+      student.joinedAt && sinifinIlkDersi && student.joinedAt > sinifinIlkDersi
+    );
 
-    return { id: student.id, name: student.name, varSayisi, yokSayisi, toplam, yuzde };
+    return {
+      id: student.id,
+      name: student.name,
+      joinedAt: student.joinedAt,
+      varSayisi,
+      yokSayisi,
+      toplam,
+      yuzde,
+      sonradanKatildi,
+    };
   });
 
   const toplamYok = satirlar.reduce((acc, satir) => acc + satir.yokSayisi, 0);
@@ -70,26 +91,32 @@ export default function ReportPanel({ classroom }) {
         </dl>
 
         {kayitliDersler.length === 0 ? (
-          <p className="empty">
-            Henüz kaydedilmiş yoklama yok. Yoklama sekmesinden bir ders kaydet.
-          </p>
+          <p className="empty">Henüz kaydedilmiş yoklama yok.</p>
         ) : (
           <div className="table-wrapper">
             <table>
-              <caption>Öğrenci bazında katılım özeti</caption>
               <thead>
                 <tr>
                   <th scope="col">Öğrenci</th>
                   <th scope="col">Var</th>
                   <th scope="col">Yok</th>
-                  <th scope="col">Toplam</th>
+                  <th scope="col">Ders</th>
                   <th scope="col">Devamsızlık</th>
                 </tr>
               </thead>
               <tbody>
                 {satirlar.map((satir) => (
                   <tr key={satir.id}>
-                    <th scope="row">{satir.name}</th>
+                    <th scope="row">
+                      <span className="cell-name">
+                        <span className="cell-name-main">{satir.name}</span>
+                        {satir.sonradanKatildi && (
+                          <small className="cell-name-note">
+                            {tarihiKisaYaz(satir.joinedAt)} tarihinden itibaren
+                          </small>
+                        )}
+                      </span>
+                    </th>
                     <td className="count-ok">{satir.varSayisi}</td>
                     <td className="count-no">{satir.yokSayisi}</td>
                     <td>{satir.toplam}</td>
@@ -124,13 +151,17 @@ export default function ReportPanel({ classroom }) {
           </p>
 
           <table>
-            <caption>Öğrenci bazında katılım özeti</caption>
+            <caption>
+              Döneme sonradan katılanların oranı, yalnızca katıldıkları tarihten itibaren
+              işlenen dersler üzerinden hesaplanmıştır.
+            </caption>
             <thead>
               <tr>
                 <th scope="col" className="col-narrow">
                   No
                 </th>
                 <th scope="col">Öğrenci</th>
+                <th scope="col">Katılım</th>
                 <th scope="col" className="col-narrow">
                   Var
                 </th>
@@ -141,7 +172,7 @@ export default function ReportPanel({ classroom }) {
                   Ders
                 </th>
                 <th scope="col" className="col-narrow">
-                  Devamsızlık
+                  Oran
                 </th>
               </tr>
             </thead>
@@ -150,6 +181,11 @@ export default function ReportPanel({ classroom }) {
                 <tr key={satir.id}>
                   <td className="mark">{index + 1}</td>
                   <th scope="row">{satir.name}</th>
+                  <td>
+                    {satir.sonradanKatildi
+                      ? `${tarihiKisaYaz(satir.joinedAt)} tarihinden itibaren`
+                      : "Dönem başından"}
+                  </td>
                   <td className="mark">{satir.varSayisi}</td>
                   <td className="mark">{satir.yokSayisi}</td>
                   <td className="mark">{satir.toplam}</td>

@@ -43,11 +43,6 @@ export default function LoginPage() {
     <section className="auth-page">
       <article className="panel">
         <h2>{isLogin ? "Giriş Yap" : "Hesap Oluştur"}</h2>
-        <p className="muted">
-          {isLogin
-            ? "Sınıflarına her cihazdan ulaşmak için hesabına gir."
-            : "Verilerin buluta kaydedilir, hangi cihazdan girersen gir aynı listeyi görürsün."}
-        </p>
 
         <form onSubmit={handleSubmit}>
           <fieldset disabled={busy}>
@@ -61,7 +56,6 @@ export default function LoginPage() {
                     id="gorunen-ad"
                     type="text"
                     autoComplete="nickname"
-                    placeholder="Örn. Ahmet Hoca"
                     value={username}
                     onChange={(event) => setUsername(event.target.value)}
                     required
@@ -75,7 +69,6 @@ export default function LoginPage() {
                   id="eposta"
                   type="email"
                   autoComplete="email"
-                  placeholder="ornek@mail.com"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   required
@@ -92,7 +85,7 @@ export default function LoginPage() {
                   onChange={(event) => setPassword(event.target.value)}
                   required
                 />
-                {!isLogin && <small className="muted">En az 6 karakter.</small>}
+                {!isLogin && <small>En az 6 karakter.</small>}
               </p>
             </div>
           </fieldset>
@@ -105,11 +98,7 @@ export default function LoginPage() {
 
           <footer className="panel-footer">
             <button type="submit" className="button button-primary" disabled={busy}>
-              {busy
-                ? "Lütfen bekle…"
-                : isLogin
-                  ? "Giriş Yap"
-                  : "Hesabı Oluştur"}
+              {busy ? "Lütfen bekle…" : isLogin ? "Giriş Yap" : "Hesabı Oluştur"}
             </button>
           </footer>
         </form>

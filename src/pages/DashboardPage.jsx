@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useData } from "../context/DataContext.jsx";
+import BackupPanel from "../components/BackupPanel.jsx";
 
 export default function DashboardPage() {
   const { classes, loading, error, clearError, addClass, deleteClass } = useData();
@@ -21,21 +22,29 @@ export default function DashboardPage() {
   }
 
   function handleDelete(classroom) {
-    const onay = window.confirm(
-      `"${classroom.name}" sınıfı ve tüm yoklama kayıtları kalıcı olarak silinsin mi?`
+    const ilkOnay = window.confirm(
+      `"${classroom.name}" siliniyor.\n\n` +
+        `${classroom.students.length} öğrenci ve ${classroom.sessions.length} ders kaydının tamamı kalıcı olarak silinecek.\n\nDevam edilsin mi?`
     );
-    if (onay) {
-      deleteClass(classroom.id);
+    if (!ilkOnay) return;
+
+    const yazilan = window.prompt(
+      `Onaylamak için sınıfın adını birebir yaz:\n\n${classroom.name}`
+    );
+    if (yazilan === null) return;
+
+    if (yazilan.trim() !== classroom.name) {
+      window.alert("Yazdığın ad eşleşmedi. Silme iptal edildi.");
+      return;
     }
+
+    deleteClass(classroom.id);
   }
 
   return (
     <section>
       <header className="page-header">
         <h2>Sınıflarım</h2>
-        <p className="muted">
-          Verilerin buluta kaydedilir. Hangi cihazdan girersen gir aynı listeyi görürsün.
-        </p>
       </header>
 
       {error && (
@@ -48,7 +57,10 @@ export default function DashboardPage() {
       )}
 
       <section className="panel">
-        <h3>Yeni sınıf</h3>
+        <header className="panel-header">
+          <h3>Yeni sınıf</h3>
+        </header>
+
         <form className="inline-form" onSubmit={handleSubmit}>
           <span className="field">
             <label htmlFor="sinif-adi">Sınıf adı</label>
@@ -75,7 +87,7 @@ export default function DashboardPage() {
       {loading && classes.length === 0 ? (
         <p className="loading">Sınıfların yükleniyor…</p>
       ) : classes.length === 0 ? (
-        <p className="empty">Henüz sınıf yok. Yukarıdan ilk sınıfını ekle.</p>
+        <p className="empty">Henüz sınıf yok.</p>
       ) : (
         <ul className="class-grid">
           {classes.map((classroom) => (
@@ -105,6 +117,8 @@ export default function DashboardPage() {
           ))}
         </ul>
       )}
+
+      <BackupPanel />
     </section>
   );
 }

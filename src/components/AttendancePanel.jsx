@@ -1,42 +1,43 @@
 import { useState } from "react";
 import { useData } from "../context/DataContext.jsx";
 import PrintSheet from "./PrintSheet.jsx";
-
-function bugununTarihi() {
-  const simdi = new Date();
-  const fark = simdi.getTimezoneOffset() * 60000;
-  return new Date(simdi.getTime() - fark).toISOString().slice(0, 10);
-}
-
-function tarihiBicimle(iso) {
-  const [yil, ay, gun] = iso.split("-");
-  return `${gun}.${ay}.${yil}`;
-}
-
-function tarihiUzunYaz(iso) {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("tr-TR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    weekday: "long",
-  });
-}
+import {
+  bugununTarihi,
+  dersBasligi,
+  tarihiBicimle,
+  tarihiUzunYaz,
+} from "../lib/tarih.js";
 
 export default function AttendancePanel({ classroom }) {
-  const { addSession, deleteSession, saveSession } = useData();
+  const { addSession, deleteSession, saveSession, online } = useData();
 
   const [newDate, setNewDate] = useState(bugununTarihi);
+  const [newSlot, setNewSlot] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [draft, setDraft] = useState({});
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [saveError, setSaveError] = useState("");
   const [info, setInfo] = useState("");
 
   const selected = classroom.sessions.find((item) => item.id === selectedId) || null;
 
+  function derseAitOgrenciler(session) {
+    if (!session) return [];
+    return classroom.students.filter(
+      (student) => !student.joinedAt || student.joinedAt <= session.date
+    );
+  }
+
+  const gorunenOgrenciler = derseAitOgrenciler(selected);
+  const gizlenenSayisi = selected
+    ? classroom.students.length - gorunenOgrenciler.length
+    : 0;
+
   function draftOlustur(session) {
     const next = {};
-    classroom.students.forEach((student) => {
+    derseAitOgrenciler(session).forEach((student) => {
       next[student.id] = session.records[student.id] ?? "var";
     });
     return next;
@@ -47,11 +48,13 @@ export default function AttendancePanel({ classroom }) {
     setDraft(draftOlustur(session));
     setEditing(!session.saved);
     setError("");
+    setSaveError("");
     setInfo("");
   }
 
   function tarihEkle(event) {
     event.preventDefault();
+    const dilim = newSlot.trim();
 
     if (classroom.students.length === 0) {
       setError("Önce Öğrenciler sekmesinden öğrenci ekle.");
@@ -61,18 +64,27 @@ export default function AttendancePanel({ classroom }) {
       setError("Lütfen bir tarih seç.");
       return;
     }
-    if (classroom.sessions.some((session) => session.date === newDate)) {
-      setError("Bu tarih zaten eklenmiş.");
+
+    const cakisma = classroom.sessions.some(
+      (session) => session.date === newDate && (session.slot || "") === dilim
+    );
+    if (cakisma) {
+      setError(
+        dilim
+          ? `Bu tarihte "${dilim}" adlı ders zaten var.`
+          : "Bu tarih zaten eklendi. İkinci ders için ders adı veya saat yaz."
+      );
       return;
     }
 
-    const session = addSession(classroom.id, newDate);
+    const session = addSession(classroom.id, newDate, dilim);
+    setNewSlot("");
     dersiAc(session);
   }
 
   function tarihSil(session) {
     const onay = window.confirm(
-      `${tarihiBicimle(session.date)} tarihli yoklama silinsin mi?`
+      `${dersBasligi(session)} dersi ve tüm işaretleri silinecek.\n\nBu işlem geri alınamaz. Devam edilsin mi?`
     );
     if (!onay) return;
 
@@ -91,55 +103,66 @@ export default function AttendancePanel({ classroom }) {
 
   function tumunuIsaretle(durum) {
     const next = {};
-    classroom.students.forEach((student) => {
+    gorunenOgrenciler.forEach((student) => {
       next[student.id] = durum;
     });
     setDraft(next);
   }
 
-  function kaydet(event) {
+  async function kaydet(event) {
     event.preventDefault();
+    setSaving(true);
+    setSaveError("");
+    setInfo("");
+
     const records = {};
-    classroom.students.forEach((student) => {
+    gorunenOgrenciler.forEach((student) => {
       records[student.id] = draft[student.id] ?? "var";
     });
 
-    saveSession(classroom.id, selected.id, records);
+    const sonuc = await saveSession(classroom.id, selected.id, records);
+    setSaving(false);
+
+    if (!sonuc.ok) {
+      setSaveError(sonuc.error);
+      return;
+    }
+
     setEditing(false);
-    setInfo("Yoklama kaydedildi. İstediğin an düzenleyebilirsin.");
+    setInfo("Yoklama kaydedildi.");
   }
 
   function duzenle() {
     setDraft(draftOlustur(selected));
     setEditing(true);
+    setSaveError("");
     setInfo("");
   }
 
   function iptal() {
     setDraft(draftOlustur(selected));
     setEditing(false);
+    setSaveError("");
     setInfo("");
   }
 
-  function pdfIndir() {
-    window.print();
-  }
-
-  const varSayisi = classroom.students.filter(
+  const varSayisi = gorunenOgrenciler.filter(
     (student) => (draft[student.id] ?? "var") === "var"
   ).length;
-  const yokSayisi = classroom.students.length - varSayisi;
+  const yokSayisi = gorunenOgrenciler.length - varSayisi;
 
   return (
     <>
       <section className="panel">
         <header className="panel-header">
           <h3>Ders tarihleri</h3>
-          <span className="muted">{classroom.sessions.length} kayıt</span>
+          <span className="header-actions">
+            <span className="muted">{classroom.sessions.length} kayıt</span>
+          </span>
         </header>
 
         <form className="inline-form" onSubmit={tarihEkle}>
-          <span className="field">
+          <span className="field field-narrow">
             <label htmlFor="ders-tarihi">Ders tarihi</label>
             <input
               id="ders-tarihi"
@@ -148,8 +171,18 @@ export default function AttendancePanel({ classroom }) {
               onChange={(event) => setNewDate(event.target.value)}
             />
           </span>
+          <span className="field">
+            <label htmlFor="ders-dilimi">Ders adı veya saati</label>
+            <input
+              id="ders-dilimi"
+              type="text"
+              placeholder="Örn. 1. Ders · 09:00 · Sabah"
+              value={newSlot}
+              onChange={(event) => setNewSlot(event.target.value)}
+            />
+          </span>
           <button type="submit" className="button button-primary">
-            Tarih Ekle
+            Ders Ekle
           </button>
         </form>
 
@@ -161,7 +194,7 @@ export default function AttendancePanel({ classroom }) {
 
         {classroom.sessions.length === 0 ? (
           <p className="empty" style={{ marginTop: "1rem" }}>
-            Henüz ders tarihi yok.
+            Henüz ders eklenmedi.
           </p>
         ) : (
           <ul className="session-list" style={{ marginTop: "1rem" }}>
@@ -170,13 +203,14 @@ export default function AttendancePanel({ classroom }) {
                 <button
                   type="button"
                   className={
-                    session.id === selectedId
-                      ? "session-chip is-active"
-                      : "session-chip"
+                    session.id === selectedId ? "session-chip is-active" : "session-chip"
                   }
                   onClick={() => dersiAc(session)}
                 >
-                  <time dateTime={session.date}>{tarihiBicimle(session.date)}</time>
+                  <span className="chip-title">
+                    <time dateTime={session.date}>{tarihiBicimle(session.date)}</time>
+                    {session.slot && <small className="chip-slot">{session.slot}</small>}
+                  </span>
                   <span className={session.saved ? "badge badge-ok" : "badge badge-wait"}>
                     {session.saved ? "Kaydedildi" : "Bekliyor"}
                   </span>
@@ -197,11 +231,9 @@ export default function AttendancePanel({ classroom }) {
       {selected && (
         <section className="panel">
           <header className="panel-header">
-            <h3>
-              <time dateTime={selected.date}>{tarihiBicimle(selected.date)}</time> yoklaması
-            </h3>
+            <h3>{dersBasligi(selected)}</h3>
             <span className="header-actions">
-              <button type="button" className="button" onClick={pdfIndir}>
+              <button type="button" className="button" onClick={() => window.print()}>
                 PDF Olarak İndir
               </button>
               {selected.saved && !editing && (
@@ -213,19 +245,25 @@ export default function AttendancePanel({ classroom }) {
           </header>
 
           <p className="muted">
-            {varSayisi} var · {yokSayisi} yok
+            {varSayisi} var · {yokSayisi} yok · {gorunenOgrenciler.length} öğrenci
           </p>
 
+          {gizlenenSayisi > 0 && (
+            <p className="notice">
+              {gizlenenSayisi} öğrenci bu tarihten sonra katıldığı için listede yok.
+            </p>
+          )}
+
           <form onSubmit={kaydet}>
-            <fieldset disabled={!editing}>
+            <fieldset disabled={!editing || saving}>
               <legend>
                 {editing
                   ? "Gelen öğrencilerin kutucuğunu işaretli bırak."
-                  : "Kaydedilmiş liste (değiştirmek için Düzenle'ye bas)."}
+                  : "Kaydedilmiş liste."}
               </legend>
 
               <ul className="attendance-list">
-                {classroom.students.map((student) => {
+                {gorunenOgrenciler.map((student) => {
                   const durum = draft[student.id] ?? "var";
                   return (
                     <li key={student.id}>
@@ -236,7 +274,9 @@ export default function AttendancePanel({ classroom }) {
                           onChange={() => durumDegistir(student.id)}
                         />
                         <span className="student-name">{student.name}</span>
-                        <span className={durum === "var" ? "status status-ok" : "status status-no"}>
+                        <span
+                          className={durum === "var" ? "status status-ok" : "status status-no"}
+                        >
                           {durum === "var" ? "Var" : "Yok"}
                         </span>
                       </label>
@@ -248,13 +288,14 @@ export default function AttendancePanel({ classroom }) {
 
             {editing && (
               <footer className="panel-footer">
-                <button type="submit" className="button button-primary">
-                  Kaydet
+                <button type="submit" className="button button-primary" disabled={saving}>
+                  {saving ? "Kaydediliyor…" : "Kaydet"}
                 </button>
                 <button
                   type="button"
                   className="button"
                   onClick={() => tumunuIsaretle("var")}
+                  disabled={saving}
                 >
                   Tümü Var
                 </button>
@@ -262,17 +303,35 @@ export default function AttendancePanel({ classroom }) {
                   type="button"
                   className="button"
                   onClick={() => tumunuIsaretle("yok")}
+                  disabled={saving}
                 >
                   Tümü Yok
                 </button>
                 {selected.saved && (
-                  <button type="button" className="button button-ghost" onClick={iptal}>
+                  <button
+                    type="button"
+                    className="button button-ghost"
+                    onClick={iptal}
+                    disabled={saving}
+                  >
                     İptal
                   </button>
                 )}
               </footer>
             )}
           </form>
+
+          {!online && (
+            <p className="form-error" role="alert">
+              İnternet bağlantısı yok. Bağlantı gelince Kaydet'e bas.
+            </p>
+          )}
+
+          {saveError && (
+            <p className="form-error" role="alert">
+              {saveError}
+            </p>
+          )}
 
           {info && <p className="form-success">{info}</p>}
         </section>
@@ -281,16 +340,19 @@ export default function AttendancePanel({ classroom }) {
       {selected && (
         <PrintSheet
           title={`${classroom.name} · Günlük Yoklama`}
-          subtitle={tarihiUzunYaz(selected.date)}
+          subtitle={
+            selected.slot
+              ? `${tarihiUzunYaz(selected.date)} · ${selected.slot}`
+              : tarihiUzunYaz(selected.date)
+          }
         >
           <p className="print-meta">
-            <span>Toplam öğrenci: {classroom.students.length}</span>
+            <span>Toplam öğrenci: {gorunenOgrenciler.length}</span>
             <span>Gelen: {varSayisi}</span>
             <span>Gelmeyen: {yokSayisi}</span>
           </p>
 
           <table>
-            <caption>Ders devam çizelgesi</caption>
             <thead>
               <tr>
                 <th scope="col" className="col-narrow">
@@ -306,7 +368,7 @@ export default function AttendancePanel({ classroom }) {
               </tr>
             </thead>
             <tbody>
-              {classroom.students.map((student, index) => {
+              {gorunenOgrenciler.map((student, index) => {
                 const durum = draft[student.id] ?? "var";
                 return (
                   <tr key={student.id}>

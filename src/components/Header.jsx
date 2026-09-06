@@ -4,11 +4,19 @@ import { useData } from "../context/DataContext.jsx";
 
 export default function Header() {
   const { user, logout } = useAuth();
-  const { pending, loading, reload } = useData();
+  const { pending, loading, reload, online } = useData();
 
   let durum = "Kayıtlı";
-  if (loading) durum = "Yükleniyor…";
-  else if (pending > 0) durum = "Kaydediliyor…";
+  let durumSinifi = "sync-status";
+
+  if (!online) {
+    durum = "Çevrimdışı";
+    durumSinifi = "sync-status is-offline";
+  } else if (loading) {
+    durum = "Yükleniyor…";
+  } else if (pending > 0) {
+    durum = "Kaydediliyor…";
+  }
 
   return (
     <header className="site-header">
@@ -20,7 +28,7 @@ export default function Header() {
 
         {user && (
           <nav aria-label="Kullanıcı menüsü">
-            <output className="sync-status" aria-live="polite">
+            <output className={durumSinifi} aria-live="polite">
               {durum}
             </output>
             <span className="user-name">{user.username}</span>
@@ -28,7 +36,7 @@ export default function Header() {
               type="button"
               className="button button-small"
               onClick={reload}
-              disabled={loading || pending > 0}
+              disabled={loading || pending > 0 || !online}
             >
               Yenile
             </button>
