@@ -89,6 +89,7 @@ export default function BackupPanel() {
           className="button"
           onClick={() => dosyaGirdisi.current?.click()}
           disabled={busy}
+          aria-busy={busy}
         >
           {busy ? "Yükleniyor…" : "Yedeği Yükle"}
         </button>

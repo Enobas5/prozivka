@@ -158,11 +158,12 @@ export default function StudentsPanel({ classroom }) {
       )}
 
       {classroom.students.length === 0 ? (
-        <p className="empty" style={{ marginTop: "1rem" }}>
-          Henüz öğrenci eklenmedi.
-        </p>
+        <section className="empty-state after-form">
+          <p className="empty-title">Henüz öğrenci eklenmedi.</p>
+          <p className="empty-hint">Ad soyad ve katılım tarihini girip Ekle'ye bas.</p>
+        </section>
       ) : (
-        <ul className="student-list" style={{ marginTop: "1rem" }}>
+        <ul className="student-list after-form">
           {classroom.students.map((student, index) =>
             duzenlenen === student.id ? (
               <li key={student.id} className="student-editing">
@@ -203,6 +204,7 @@ export default function StudentsPanel({ classroom }) {
                     type="submit"
                     className="button button-primary button-small"
                     disabled={duzenKaydediliyor}
+                    aria-busy={duzenKaydediliyor}
                   >
                     {duzenKaydediliyor ? "Kaydediliyor…" : "Kaydet"}
                   </button>
@@ -237,6 +239,7 @@ export default function StudentsPanel({ classroom }) {
                   type="button"
                   className="button button-small"
                   onClick={() => duzenlemeyiAc(student)}
+                  aria-label={`${student.name}: Düzenle`}
                 >
                   Düzenle
                 </button>
@@ -244,6 +247,7 @@ export default function StudentsPanel({ classroom }) {
                   type="button"
                   className="button button-ghost button-small"
                   onClick={() => handleDelete(student)}
+                  aria-label={`${student.name}: Sil`}
                 >
                   Sil
                 </button>

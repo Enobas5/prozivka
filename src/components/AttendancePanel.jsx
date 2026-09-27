@@ -193,11 +193,14 @@ export default function AttendancePanel({ classroom }) {
         )}
 
         {classroom.sessions.length === 0 ? (
-          <p className="empty" style={{ marginTop: "1rem" }}>
-            Henüz ders eklenmedi.
-          </p>
+          <section className="empty-state after-form">
+            <p className="empty-title">Henüz ders eklenmedi.</p>
+            <p className="empty-hint">
+              Tarih seçip Ders Ekle'ye bas, sonra öğrencileri işaretle.
+            </p>
+          </section>
         ) : (
-          <ul className="session-list" style={{ marginTop: "1rem" }}>
+          <ul className="session-list after-form">
             {classroom.sessions.map((session) => (
               <li key={session.id}>
                 <button
@@ -205,6 +208,7 @@ export default function AttendancePanel({ classroom }) {
                   className={
                     session.id === selectedId ? "session-chip is-active" : "session-chip"
                   }
+                  aria-pressed={session.id === selectedId}
                   onClick={() => dersiAc(session)}
                 >
                   <span className="chip-title">
@@ -219,6 +223,7 @@ export default function AttendancePanel({ classroom }) {
                   type="button"
                   className="button button-ghost button-small"
                   onClick={() => tarihSil(session)}
+                  aria-label={`${dersBasligi(session)}: Sil`}
                 >
                   Sil
                 </button>
@@ -287,8 +292,13 @@ export default function AttendancePanel({ classroom }) {
             </fieldset>
 
             {editing && (
-              <footer className="panel-footer">
-                <button type="submit" className="button button-primary" disabled={saving}>
+              <footer className="panel-footer sticky-actions">
+                <button
+                  type="submit"
+                  className="button button-primary"
+                  disabled={saving}
+                  aria-busy={saving}
+                >
                   {saving ? "Kaydediliyor…" : "Kaydet"}
                 </button>
                 <button

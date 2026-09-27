@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import LoadingState from "../components/LoadingState.jsx";
 
 export default function ResetPasswordPage() {
   const { user, ready, recovering, updatePassword, logout } = useAuth();
@@ -43,7 +44,7 @@ export default function ResetPasswordPage() {
   }
 
   if (!ready) {
-    return <p className="loading">Yükleniyor…</p>;
+    return <LoadingState label="Yükleniyor…" />;
   }
 
   if (done) {
@@ -129,7 +130,12 @@ export default function ResetPasswordPage() {
           )}
 
           <footer className="panel-footer">
-            <button type="submit" className="button button-primary" disabled={busy}>
+            <button
+              type="submit"
+              className="button button-primary"
+              disabled={busy}
+              aria-busy={busy}
+            >
               {busy ? "Kaydediliyor…" : "Şifreyi Kaydet"}
             </button>
           </footer>

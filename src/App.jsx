@@ -6,12 +6,13 @@ import LoginPage from "./pages/LoginPage.jsx";
 import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import ClassPage from "./pages/ClassPage.jsx";
+import LoadingState from "./components/LoadingState.jsx";
 
 function ProtectedRoute({ children }) {
   const { user, ready, recovering } = useAuth();
 
   if (!ready) {
-    return <p className="loading">Yükleniyor…</p>;
+    return <LoadingState label="Yükleniyor…" />;
   }
   if (recovering) {
     return <Navigate to="/sifre-sifirla" replace />;
@@ -26,7 +27,7 @@ function GuestRoute({ children }) {
   const { user, ready, recovering } = useAuth();
 
   if (!ready) {
-    return <p className="loading">Yükleniyor…</p>;
+    return <LoadingState label="Yükleniyor…" />;
   }
   if (recovering) {
     return <Navigate to="/sifre-sifirla" replace />;

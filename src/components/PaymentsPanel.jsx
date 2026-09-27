@@ -241,8 +241,10 @@ export default function PaymentsPanel({ classroom }) {
                   return (
                     <tr key={student.id}>
                       <th scope="row">{student.name}</th>
-                      <td className="money">{tutar === null ? "—" : paraYaz(tutar)}</td>
-                      <td>
+                      <td className="money" data-label="Aidat">
+                        {tutar === null ? "—" : paraYaz(tutar)}
+                      </td>
+                      <td data-label="Durum">
                         {aidatYok ? (
                           <span className="muted">Aidat girilmemiş</span>
                         ) : (
@@ -253,19 +255,20 @@ export default function PaymentsPanel({ classroom }) {
                             title="Değiştirmek için tıkla"
                             onClick={() => durumDegistir(satir)}
                             disabled={kilitli}
+                            aria-busy={buSatirda}
                           >
                             {buSatirda ? "Kaydediliyor…" : odendi ? "Ödendi" : "Bekliyor"}
                           </button>
                         )}
                       </td>
-                      <td>
+                      <td data-label="Ödeme tarihi">
                         {kayit?.paidAt ? (
                           <time dateTime={kayit.paidAt}>{tarihiBicimle(kayit.paidAt)}</time>
                         ) : (
                           "—"
                         )}
                       </td>
-                      <td className="cell-note">
+                      <td className="cell-note" data-label="Not">
                         {notDuzenlenen === student.id ? (
                           <form className="note-form" onSubmit={(event) => notuKaydet(event, satir)}>
                             <input
@@ -280,6 +283,7 @@ export default function PaymentsPanel({ classroom }) {
                               type="submit"
                               className="button button-primary button-small"
                               disabled={kilitli}
+                              aria-busy={buSatirda}
                             >
                               {buSatirda ? "Kaydediliyor…" : "Kaydet"}
                             </button>
@@ -300,6 +304,7 @@ export default function PaymentsPanel({ classroom }) {
                               className="link-button"
                               onClick={() => notuAc(satir)}
                               disabled={kilitli}
+                              aria-label={`${student.name}: ${kayit?.note ? "Notu düzenle" : "Not ekle"}`}
                             >
                               {kayit?.note ? "Düzenle" : "Not ekle"}
                             </button>

@@ -131,7 +131,12 @@ export default function LoginPage() {
           {info && <p className="form-success">{info}</p>}
 
           <footer className="panel-footer">
-            <button type="submit" className="button button-primary" disabled={busy}>
+            <button
+              type="submit"
+              className="button button-primary"
+              disabled={busy}
+              aria-busy={busy}
+            >
               {busy ? "Lütfen bekle…" : butonYazisi}
             </button>
           </footer>

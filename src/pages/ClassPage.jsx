@@ -5,6 +5,8 @@ import StudentsPanel from "../components/StudentsPanel.jsx";
 import AttendancePanel from "../components/AttendancePanel.jsx";
 import ReportPanel from "../components/ReportPanel.jsx";
 import PaymentsPanel from "../components/PaymentsPanel.jsx";
+import ErrorBanner from "../components/ErrorBanner.jsx";
+import LoadingState from "../components/LoadingState.jsx";
 
 const TABS = [
   { id: "ogrenciler", label: "Öğrenciler" },
@@ -15,24 +17,29 @@ const TABS = [
 
 export default function ClassPage() {
   const { classId } = useParams();
-  const { getClass, loading, error, clearError } = useData();
+  const { getClass, loading } = useData();
   const [activeTab, setActiveTab] = useState("ogrenciler");
 
   const classroom = getClass(classId);
 
   if (!classroom && loading) {
-    return <p className="loading">Sınıf yükleniyor…</p>;
+    return <LoadingState label="Sınıf yükleniyor…" variant="class" />;
   }
 
   if (!classroom) {
     return (
-      <section className="panel">
-        <h2>Sınıf bulunamadı</h2>
-        <p className="muted">Bu sınıf silinmiş olabilir.</p>
-        <Link className="button button-primary" to="/">
-          Sınıflara dön
-        </Link>
-      </section>
+      <>
+        <ErrorBanner />
+        <section className="panel">
+          <h2>Sınıf bulunamadı</h2>
+          <p className="muted">Bu sınıf silinmiş olabilir.</p>
+          <footer className="panel-footer">
+            <Link className="button button-primary" to="/">
+              Sınıflara dön
+            </Link>
+          </footer>
+        </section>
+      </>
     );
   }
 
@@ -48,14 +55,7 @@ export default function ClassPage() {
         </p>
       </header>
 
-      {error && (
-        <p className="form-error" role="alert">
-          {error}{" "}
-          <button type="button" className="link-button" onClick={clearError}>
-            Kapat
-          </button>
-        </p>
-      )}
+      <ErrorBanner />
 
       <nav className="tabs" aria-label="Sınıf sekmeleri">
         <ul>

@@ -117,10 +117,14 @@ export default function ReportPanel({ classroom }) {
                         )}
                       </span>
                     </th>
-                    <td className="count-ok">{satir.varSayisi}</td>
-                    <td className="count-no">{satir.yokSayisi}</td>
-                    <td>{satir.toplam}</td>
-                    <td>
+                    <td className="count-ok" data-label="Var">
+                      {satir.varSayisi}
+                    </td>
+                    <td className="count-no" data-label="Yok">
+                      {satir.yokSayisi}
+                    </td>
+                    <td data-label="Ders">{satir.toplam}</td>
+                    <td data-label="Devamsızlık">
                       <meter
                         min="0"
                         max="100"

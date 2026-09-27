@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useData } from "../context/DataContext.jsx";
 import BackupPanel from "../components/BackupPanel.jsx";
+import ErrorBanner from "../components/ErrorBanner.jsx";
+import LoadingState from "../components/LoadingState.jsx";
 
 export default function DashboardPage() {
-  const { classes, loading, error, clearError, addClass, deleteClass } = useData();
+  const { classes, loading, addClass, deleteClass } = useData();
   const [name, setName] = useState("");
   const [formError, setFormError] = useState("");
 
@@ -47,14 +49,7 @@ export default function DashboardPage() {
         <h2>Sınıflarım</h2>
       </header>
 
-      {error && (
-        <p className="form-error" role="alert">
-          {error}{" "}
-          <button type="button" className="link-button" onClick={clearError}>
-            Kapat
-          </button>
-        </p>
-      )}
+      <ErrorBanner />
 
       <section className="panel">
         <header className="panel-header">
@@ -85,9 +80,12 @@ export default function DashboardPage() {
       </section>
 
       {loading && classes.length === 0 ? (
-        <p className="loading">Sınıfların yükleniyor…</p>
+        <LoadingState label="Sınıfların yükleniyor…" variant="cards" />
       ) : classes.length === 0 ? (
-        <p className="empty">Henüz sınıf yok.</p>
+        <section className="empty-state is-standalone">
+          <p className="empty-title">Henüz sınıf yok.</p>
+          <p className="empty-hint">Yukarıya sınıf adını yazıp Sınıf Ekle'ye bas.</p>
+        </section>
       ) : (
         <ul className="class-grid">
           {classes.map((classroom) => (
@@ -101,6 +99,7 @@ export default function DashboardPage() {
                   <Link
                     className="button button-primary button-small"
                     to={`/sinif/${classroom.id}`}
+                    aria-label={`${classroom.name}: Aç`}
                   >
                     Aç
                   </Link>
@@ -108,6 +107,7 @@ export default function DashboardPage() {
                     type="button"
                     className="button button-ghost button-small"
                     onClick={() => handleDelete(classroom)}
+                    aria-label={`${classroom.name}: Sil`}
                   >
                     Sil
                   </button>
