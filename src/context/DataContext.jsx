@@ -4,7 +4,7 @@ import { useAuth } from "./AuthContext.jsx";
 import { bugununTarihi, gunDamgasi } from "../lib/tarih.js";
 
 const DataContext = createContext(null);
-const YEDEK_SURUMU = 2;
+const YEDEK_SURUMU = 3;
 
 function yeniId() {
   return crypto.randomUUID();
@@ -16,6 +16,21 @@ function sortSessions(sessions) {
     if (a.date !== b.date) return a.date < b.date ? 1 : -1;
     return (a.slot || "").localeCompare(b.slot || "", "tr");
   });
+}
+
+// payments satirlari -> { "2026-09": { ogrenciId: { amount, status, paidAt, note } } }
+function odemeHaritasi(satirlar) {
+  const harita = {};
+  satirlar.forEach((p) => {
+    if (!harita[p.period]) harita[p.period] = {};
+    harita[p.period][p.student_id] = {
+      amount: Number(p.amount) || 0,
+      status: p.status === "odendi" ? "odendi" : "bekliyor",
+      paidAt: p.paid_at || "",
+      note: p.note || "",
+    };
+  });
+  return harita;
 }
 
 function zamanAsimli(sozVerme, ms = 15000) {
@@ -34,6 +49,7 @@ export function DataProvider({ children }) {
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState(0);
   const [error, setError] = useState("");
+  const [paymentsError, setPaymentsError] = useState("");
   const [online, setOnline] = useState(
     typeof navigator === "undefined" ? true : navigator.onLine
   );
@@ -67,7 +83,7 @@ export function DataProvider({ children }) {
 
     setLoading(true);
     try {
-      const [siniflar, ogrenciler, dersler, yoklamalar] = await Promise.all([
+      const [siniflar, ogrenciler, dersler, yoklamalar, odemeler] = await Promise.all([
         supabase.from("classes").select("*").eq("user_id", user.id).order("created_at"),
         supabase.from("students").select("*").eq("user_id", user.id).order("created_at"),
         supabase
@@ -76,10 +92,19 @@ export function DataProvider({ children }) {
           .eq("user_id", user.id)
           .order("date", { ascending: false }),
         supabase.from("attendance").select("*").eq("user_id", user.id),
+        supabase.from("payments").select("*").eq("user_id", user.id),
       ]);
 
       const hatali = [siniflar, ogrenciler, dersler, yoklamalar].find((r) => r.error);
       if (hatali) throw hatali.error;
+
+      // Odeme tablosu okunamazsa (orn. SQL henuz calistirilmadi)
+      // yoklama tarafi etkilenmesin; sadece Odemeler sekmesi uyarir.
+      const odemeSatirlari = odemeler.error ? [] : odemeler.data;
+      setPaymentsError(
+        odemeler.error ? `Ödeme kayıtları yüklenemedi: ${odemeler.error.message}` : ""
+      );
+      const ogrencininSinifi = new Map(ogrenciler.data.map((o) => [o.id, o.class_id]));
 
       const birlesik = siniflar.data.map((sinif) => ({
         id: sinif.id,
@@ -92,7 +117,14 @@ export function DataProvider({ children }) {
             name: o.name,
             createdAt: o.created_at,
             joinedAt: o.joined_at || gunDamgasi(o.created_at),
+            monthlyFee:
+              o.monthly_fee === null || o.monthly_fee === undefined
+                ? null
+                : Number(o.monthly_fee),
           })),
+        payments: odemeHaritasi(
+          odemeSatirlari.filter((p) => ogrencininSinifi.get(p.student_id) === sinif.id)
+        ),
         sessions: sortSessions(
           dersler.data
             .filter((d) => d.class_id === sinif.id)
@@ -174,6 +206,7 @@ export function DataProvider({ children }) {
       createdAt: new Date().toISOString(),
       students: [],
       sessions: [],
+      payments: {},
     };
 
     setClasses((onceki) => [...onceki, classroom]);
@@ -193,12 +226,13 @@ export function DataProvider({ children }) {
 
   // ---------- Ogrenci ----------
 
-  function addStudent(classId, name, joinedAt) {
+  function addStudent(classId, name, joinedAt, monthlyFee = null) {
     const student = {
       id: yeniId(),
       name: name.trim(),
       createdAt: new Date().toISOString(),
       joinedAt: joinedAt || bugununTarihi(),
+      monthlyFee,
     };
 
     updateClass(classId, (classroom) => ({
@@ -214,6 +248,8 @@ export function DataProvider({ children }) {
         name: student.name,
         created_at: student.createdAt,
         joined_at: student.joinedAt,
+        // Aidat girilmediyse sutunu hic gonderme: eski semada da calissin.
+        ...(monthlyFee !== null ? { monthly_fee: monthlyFee } : {}),
       })
     );
 
@@ -368,6 +404,98 @@ export function DataProvider({ children }) {
     }
   }
 
+  // ---------- Aylik aidat (bekleyen, guvenli) ----------
+
+  async function updateMonthlyFee(classId, studentId, monthlyFee) {
+    if (!online) {
+      return {
+        ok: false,
+        error: "İnternet bağlantısı yok. Aidat KAYDEDİLMEDİ. Bağlantı gelince tekrar dene.",
+      };
+    }
+
+    pendingRef.current += 1;
+    setPending(pendingRef.current);
+
+    try {
+      const yazma = await zamanAsimli(
+        supabase.from("students").update({ monthly_fee: monthlyFee }).eq("id", studentId)
+      );
+      if (yazma.error) throw yazma.error;
+
+      updateClass(classId, (classroom) => ({
+        ...classroom,
+        students: classroom.students.map((item) =>
+          item.id === studentId ? { ...item, monthlyFee } : item
+        ),
+      }));
+
+      setError("");
+      return { ok: true };
+    } catch (hata) {
+      return { ok: false, error: `Aidat KAYDEDİLEMEDİ: ${hata.message}` };
+    } finally {
+      pendingRef.current -= 1;
+      setPending(pendingRef.current);
+    }
+  }
+
+  // ---------- Odeme kaydi (bekleyen, guvenli) ----------
+
+  // kayit: { amount, status, paidAt, note } — ogrencinin o aydaki tam durumu.
+  async function setPayment(classId, studentId, period, kayit) {
+    if (!online) {
+      return {
+        ok: false,
+        error: "İnternet bağlantısı yok. Ödeme KAYDEDİLMEDİ. Bağlantı gelince tekrar dene.",
+      };
+    }
+
+    const satir = {
+      student_id: studentId,
+      user_id: user.id,
+      period,
+      amount: kayit.amount,
+      status: kayit.status,
+      paid_at: kayit.paidAt || null,
+      note: kayit.note || null,
+    };
+
+    pendingRef.current += 1;
+    setPending(pendingRef.current);
+
+    try {
+      const yazma = await zamanAsimli(
+        supabase.from("payments").upsert(satir, { onConflict: "student_id,period" })
+      );
+      if (yazma.error) throw yazma.error;
+
+      updateClass(classId, (classroom) => ({
+        ...classroom,
+        payments: {
+          ...classroom.payments,
+          [period]: {
+            ...(classroom.payments?.[period] || {}),
+            [studentId]: {
+              amount: kayit.amount,
+              status: kayit.status,
+              paidAt: kayit.paidAt || "",
+              note: kayit.note || "",
+            },
+          },
+        },
+      }));
+
+      setError("");
+      return { ok: true };
+    } catch (hata) {
+      return { ok: false, error: `Ödeme KAYDEDİLEMEDİ: ${hata.message}. Tekrar dene.` };
+    } finally {
+      pendingRef.current -= 1;
+      setPending(pendingRef.current);
+    }
+  }
+
   // ---------- Yedekleme ----------
 
   function exportData() {
@@ -383,6 +511,7 @@ export function DataProvider({ children }) {
           name: o.name,
           createdAt: o.createdAt,
           joinedAt: o.joinedAt,
+          monthlyFee: o.monthlyFee ?? null,
         })),
         sessions: sinif.sessions.map((d) => ({
           date: d.date,
@@ -390,6 +519,16 @@ export function DataProvider({ children }) {
           saved: d.saved,
           records: d.records,
         })),
+        payments: Object.entries(sinif.payments || {}).flatMap(([period, kayitlar]) =>
+          Object.entries(kayitlar).map(([studentId, k]) => ({
+            studentId,
+            period,
+            amount: k.amount,
+            status: k.status,
+            paidAt: k.paidAt || "",
+            note: k.note || "",
+          }))
+        ),
       })),
     };
   }
@@ -397,6 +536,12 @@ export function DataProvider({ children }) {
   async function importData(yedek) {
     if (!yedek || yedek.format !== "prozivka-yedek" || !Array.isArray(yedek.classes)) {
       return { ok: false, error: "Bu dosya bir prozivka yedeği değil." };
+    }
+    if (Number(yedek.version) > YEDEK_SURUMU) {
+      return {
+        ok: false,
+        error: "Bu yedek uygulamanın daha yeni bir sürümüyle alınmış. Sayfayı yenileyip tekrar dene.",
+      };
     }
 
     pendingRef.current += 1;
@@ -426,6 +571,10 @@ export function DataProvider({ children }) {
             name: o.name,
             created_at: o.createdAt || new Date().toISOString(),
             joined_at: o.joinedAt || gunDamgasi(o.createdAt) || bugununTarihi(),
+            // Surum 2 ve oncesinde aidat yok.
+            ...(o.monthlyFee !== null && o.monthlyFee !== undefined
+              ? { monthly_fee: Number(o.monthlyFee) }
+              : {}),
           };
         });
 
@@ -467,6 +616,26 @@ export function DataProvider({ children }) {
             if (yoklamaYazma.error) throw yoklamaYazma.error;
           }
         }
+
+        // Surum 2 ve oncesinde odeme yok.
+        const odemeSatirlari = (sinif.payments || [])
+          .filter((p) => eslesme.has(p.studentId) && p.period)
+          .map((p) => ({
+            student_id: eslesme.get(p.studentId),
+            user_id: user.id,
+            period: p.period,
+            amount: Number(p.amount) || 0,
+            status: p.status === "odendi" ? "odendi" : "bekliyor",
+            paid_at: p.paidAt || null,
+            note: p.note || null,
+          }));
+
+        if (odemeSatirlari.length > 0) {
+          const odemeYazma = await zamanAsimli(
+            supabase.from("payments").insert(odemeSatirlari)
+          );
+          if (odemeYazma.error) throw odemeYazma.error;
+        }
       }
 
       await reload();
@@ -484,6 +653,7 @@ export function DataProvider({ children }) {
     loading,
     pending,
     error,
+    paymentsError,
     online,
     reload,
     clearError: () => setError(""),
@@ -496,6 +666,8 @@ export function DataProvider({ children }) {
     addSession,
     deleteSession,
     saveSession,
+    updateMonthlyFee,
+    setPayment,
     exportData,
     importData,
   };

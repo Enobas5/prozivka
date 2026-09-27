@@ -1,17 +1,24 @@
 import { useState } from "react";
 import { useData } from "../context/DataContext.jsx";
 import { bugununTarihi, tarihiKisaYaz } from "../lib/tarih.js";
+import { paraYaz, tutarGirdisi, tutariOku } from "../lib/para.js";
+
+const AIDAT_HATASI = "Aidat geçerli bir tutar olmalı. Örn. 1500 veya 1.500,50";
 
 export default function StudentsPanel({ classroom }) {
-  const { addStudent, updateStudent, deleteStudent } = useData();
+  const { addStudent, updateStudent, deleteStudent, updateMonthlyFee } = useData();
 
   const [name, setName] = useState("");
   const [joinDate, setJoinDate] = useState(bugununTarihi);
+  const [fee, setFee] = useState("");
   const [error, setError] = useState("");
 
   const [duzenlenen, setDuzenlenen] = useState(null);
   const [duzenAd, setDuzenAd] = useState("");
   const [duzenTarih, setDuzenTarih] = useState("");
+  const [duzenAidat, setDuzenAidat] = useState("");
+  const [duzenHata, setDuzenHata] = useState("");
+  const [duzenKaydediliyor, setDuzenKaydediliyor] = useState(false);
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -34,8 +41,15 @@ export default function StudentsPanel({ classroom }) {
       return;
     }
 
-    addStudent(classroom.id, temiz, joinDate);
+    const aidat = tutariOku(fee);
+    if (Number.isNaN(aidat)) {
+      setError(AIDAT_HATASI);
+      return;
+    }
+
+    addStudent(classroom.id, temiz, joinDate, aidat);
     setName("");
+    setFee("");
     setError("");
   }
 
@@ -43,19 +57,41 @@ export default function StudentsPanel({ classroom }) {
     setDuzenlenen(student.id);
     setDuzenAd(student.name);
     setDuzenTarih(student.joinedAt || bugununTarihi());
+    setDuzenAidat(tutarGirdisi(student.monthlyFee));
+    setDuzenHata("");
   }
 
   function duzenlemeyiKapat() {
     setDuzenlenen(null);
     setDuzenAd("");
     setDuzenTarih("");
+    setDuzenAidat("");
+    setDuzenHata("");
   }
 
-  function duzenlemeyiKaydet(event, student) {
+  async function duzenlemeyiKaydet(event, student) {
     event.preventDefault();
     const temiz = duzenAd.trim();
 
     if (temiz.length < 2 || !duzenTarih) return;
+
+    const aidat = tutariOku(duzenAidat);
+    if (Number.isNaN(aidat)) {
+      setDuzenHata(AIDAT_HATASI);
+      return;
+    }
+
+    // Aidat degistiyse once sunucu onayini bekle; olmazsa form acik kalsin.
+    if (aidat !== (student.monthlyFee ?? null)) {
+      setDuzenKaydediliyor(true);
+      const sonuc = await updateMonthlyFee(classroom.id, student.id, aidat);
+      setDuzenKaydediliyor(false);
+
+      if (!sonuc.ok) {
+        setDuzenHata(sonuc.error);
+        return;
+      }
+    }
 
     updateStudent(classroom.id, student.id, { name: temiz, joinedAt: duzenTarih });
     duzenlemeyiKapat();
@@ -97,6 +133,17 @@ export default function StudentsPanel({ classroom }) {
             type="date"
             value={joinDate}
             onChange={(event) => setJoinDate(event.target.value)}
+          />
+        </span>
+        <span className="field field-narrow">
+          <label htmlFor="aylik-aidat">Aylık aidat (TL)</label>
+          <input
+            id="aylik-aidat"
+            type="text"
+            inputMode="decimal"
+            placeholder="İsteğe bağlı"
+            value={fee}
+            onChange={(event) => setFee(event.target.value)}
           />
         </span>
         <button type="submit" className="button button-primary">
@@ -141,17 +188,38 @@ export default function StudentsPanel({ classroom }) {
                       onChange={(event) => setDuzenTarih(event.target.value)}
                     />
                   </span>
-                  <button type="submit" className="button button-primary button-small">
-                    Kaydet
+                  <span className="field field-narrow">
+                    <label htmlFor={`aidat-${student.id}`}>Aylık aidat (TL)</label>
+                    <input
+                      id={`aidat-${student.id}`}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Boş: aidat yok"
+                      value={duzenAidat}
+                      onChange={(event) => setDuzenAidat(event.target.value)}
+                    />
+                  </span>
+                  <button
+                    type="submit"
+                    className="button button-primary button-small"
+                    disabled={duzenKaydediliyor}
+                  >
+                    {duzenKaydediliyor ? "Kaydediliyor…" : "Kaydet"}
                   </button>
                   <button
                     type="button"
                     className="button button-small"
                     onClick={duzenlemeyiKapat}
+                    disabled={duzenKaydediliyor}
                   >
                     İptal
                   </button>
                 </form>
+                {duzenHata && (
+                  <p className="form-error" role="alert">
+                    {duzenHata}
+                  </p>
+                )}
               </li>
             ) : (
               <li key={student.id}>
@@ -159,7 +227,10 @@ export default function StudentsPanel({ classroom }) {
                 <span className="cell-name">
                   <span className="cell-name-main">{student.name}</span>
                   <small className="cell-name-note">
-                    Katılım: {tarihiKisaYaz(student.joinedAt)}
+                    Katılım: {tarihiKisaYaz(student.joinedAt)} ·{" "}
+                    {student.monthlyFee === null || student.monthlyFee === undefined
+                      ? "Aidat girilmemiş"
+                      : `Aidat: ${paraYaz(student.monthlyFee)}`}
                   </small>
                 </span>
                 <button

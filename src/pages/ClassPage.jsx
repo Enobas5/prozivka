@@ -4,11 +4,13 @@ import { useData } from "../context/DataContext.jsx";
 import StudentsPanel from "../components/StudentsPanel.jsx";
 import AttendancePanel from "../components/AttendancePanel.jsx";
 import ReportPanel from "../components/ReportPanel.jsx";
+import PaymentsPanel from "../components/PaymentsPanel.jsx";
 
 const TABS = [
   { id: "ogrenciler", label: "Öğrenciler" },
   { id: "yoklama", label: "Yoklama" },
   { id: "devam", label: "Devam Durumu" },
+  { id: "odemeler", label: "Ödemeler" },
 ];
 
 export default function ClassPage() {
@@ -75,6 +77,7 @@ export default function ClassPage() {
       {activeTab === "ogrenciler" && <StudentsPanel classroom={classroom} />}
       {activeTab === "yoklama" && <AttendancePanel classroom={classroom} />}
       {activeTab === "devam" && <ReportPanel classroom={classroom} />}
+      {activeTab === "odemeler" && <PaymentsPanel classroom={classroom} />}
     </article>
   );
 }
